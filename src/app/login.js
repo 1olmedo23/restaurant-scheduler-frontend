@@ -16,7 +16,7 @@ export default function Login() {
       const userData = await loginUser(email, password);
       if (userData) {
         setUser(userData); // this is what profile.js will use
-        router.push('/profile');
+        router.push('/employee-home');
       } else {
         Alert.alert('Login failed');
       }

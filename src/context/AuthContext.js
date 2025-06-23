@@ -1,5 +1,5 @@
-// src/context/AuthContext.js
 import { createContext, useContext, useState } from 'react';
+import { loginUser } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -7,19 +7,22 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   const login = async (email, password) => {
-    const res = await fetch('http://192.168.0.8:5000/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+  try {
+    const result = await loginUser(email, password);
+
+    if (!result) throw new Error('Login failed');
+
+    // ✅ Store user and token
+    setUser({
+      ...result.user,
+      token: result.token,
     });
 
-    if (!res.ok) {
-      throw new Error('Login failed');
-    }
-
-    const data = await res.json();
-    setUser(data.user); // This will allow profile.js to show email
-  };
+  } catch (err) {
+    console.error('Login error:', err);
+    throw err;
+  }
+};
 
   return (
     <AuthContext.Provider value={{ user, setUser, login }}>

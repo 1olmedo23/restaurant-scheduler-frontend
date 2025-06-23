@@ -1,30 +1,60 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { Button, FlatList, Text, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { getMySchedule } from '../services/api';
 
 export default function Schedule() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [schedule, setSchedule] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchSchedule = async () => {
-      const data = await getMySchedule(user?.token);
+      if (!user?.token) return;
+
+      const data = await getMySchedule(user.token);
       setSchedule(data);
     };
+
     fetchSchedule();
-  }, []);
+  }, [user]);
+
+  const handleLogout = () => {
+    setUser(null);
+    router.replace('/');
+  };
+
+  const renderShift = ({ item }) => {
+    const shiftDate = new Date(item.shift_date).toLocaleDateString();
+    const start = item.start_time?.slice(0, 5);
+    const end = item.end_time?.slice(0, 5);
+    const status = item.status;
+
+    return (
+      <Text style={{ marginBottom: 10 }}>
+        {shiftDate} | {start} - {end} | {status}
+      </Text>
+    );
+  };
 
   return (
     <View style={{ padding: 20 }}>
-      <Text>My Upcoming Shifts:</Text>
-      <FlatList
-        data={schedule}
-        keyExtractor={(item) => item.schedule_id.toString()}
-        renderItem={({ item }) => (
-          <Text>{item.shift_date} - {item.start_time} to {item.end_time}</Text>
-        )}
-      />
+      <Text style={{ fontSize: 20, marginBottom: 20 }}>My Schedule</Text>
+
+      {schedule.length === 0 ? (
+        <Text>No shifts scheduled</Text>
+      ) : (
+        <FlatList
+          data={schedule}
+          keyExtractor={(item) => item.schedule_id?.toString() ?? Math.random().toString()}
+          renderItem={renderShift}
+        />
+      )}
+
+      <View style={{ marginTop: 20 }}>
+        <Button title="Logout" color="red" onPress={handleLogout} />
+      </View>
     </View>
   );
 }
