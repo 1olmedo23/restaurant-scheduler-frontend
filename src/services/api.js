@@ -76,10 +76,11 @@ export const getMySchedule = async (token) => {
     const res = await fetch(`${BASE_URL}/my-schedule`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+
     const data = await res.json();
-    return data.schedule || [];
+    return data;  // Return full response object
   } catch (err) {
     console.error(err);
-    return [];
+    return { schedule: [] };  // Fallback shape for consistency
   }
 };

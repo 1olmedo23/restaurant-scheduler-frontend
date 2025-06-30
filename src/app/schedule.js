@@ -13,8 +13,8 @@ export default function Schedule() {
     const fetchSchedule = async () => {
       if (!user?.token) return;
 
-      const data = await getMySchedule(user.token);
-      setSchedule(data);
+      const res = await getMySchedule(user.token);
+      setSchedule(res.schedule || []);
     };
 
     fetchSchedule();
@@ -29,11 +29,12 @@ export default function Schedule() {
     const shiftDate = new Date(item.shift_date).toLocaleDateString();
     const start = item.start_time?.slice(0, 5);
     const end = item.end_time?.slice(0, 5);
-    const status = item.status;
+    const position = item.position || 'N/A';
+    const status = item.status || '—';
 
     return (
       <Text style={{ marginBottom: 10 }}>
-        {shiftDate} | {start} - {end} | {status}
+        {shiftDate} | {start} - {end} | {position} | {status}
       </Text>
     );
   };

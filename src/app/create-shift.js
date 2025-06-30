@@ -1,30 +1,146 @@
-// src/app/create-shift.js
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Button, Platform, Text, View } from 'react-native';
+import {
+  Alert,
+  Button,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function CreateShift() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [shiftDate, setShiftDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [position, setPosition] = useState('');
   const [employees, setEmployees] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [shifts, setShifts] = useState([]);
 
-  const positionOptions = ['Server', 'Host', 'Busser', 'Manager'];
+  const positionOptions = [
+    'Server', 'Assistant', 'Server 1', 'Server 2', 'Sushi',
+    'Expo', 'Busser 1', 'Busser 2', 'Host 1', 'Host 2', 'FLOAT'
+  ];
+
   const timeOptions = [
-    '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00',
-    '18:00', '19:00', '20:00', '21:00',
+    '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
+    '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
     '22:00', 'close'
   ];
 
-  // Restrict access to managers
+  const lunchRoles = ['Server', 'Assistant'];
+  const dinnerRoles = [
+    'Server 1', 'Server 2', 'Sushi', 'Expo', 'Busser 1',
+    'Busser 2', 'Host 1', 'Host 2', 'FLOAT'
+  ];
+
+  const today = new Date();
+  const calendarDates = Array.from({ length: 28 }).map((_, index) => {
+    const d = new Date();
+    d.setDate(today.getDate() + index);
+    return d;
+  });
+
+  const formatDate = (d) => d.toISOString().split('T')[0];
+  const getMonthName = (d) => d.toLocaleString('default', { month: 'short' });
+
+  const loadShifts = async () => {
+    try {
+      const res = await fetch('http://192.168.0.8:5000/api/shifts', {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const data = await res.json();
+      setShifts(data || []);
+    } catch (err) {
+      console.error('Failed to fetch shifts:', err);
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const res = await fetch('http://192.168.0.8:5000/api/employees', {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      const data = await res.json();
+      setEmployees(data);
+    } catch (err) {
+      console.error('Failed to fetch employees:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.user?.role === 'manager') {
+      loadEmployees();
+      loadShifts();
+    }
+  }, []);
+
+  const handleCreateShift = async () => {
+    if (!selectedDate || !startTime || !endTime || !position) {
+      Alert.alert('Missing Fields', 'Please complete all required fields.');
+      return;
+    }
+
+    try {
+      const res = await fetch('http://192.168.0.8:5000/api/shifts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          shift_date: selectedDate,
+          start_time: startTime,
+          end_time: endTime,
+          position,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw data;
+
+      if (selectedEmployeeId) {
+        const assignRes = await fetch('http://192.168.0.8:5000/api/schedules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify({
+            shift_id: data.shift.id,
+            employee_id: selectedEmployeeId,
+          }),
+        });
+
+        const assignData = await assignRes.json();
+        if (!assignRes.ok) throw assignData;
+      }
+
+      Alert.alert('✅ Shift Created');
+      setStartTime('');
+      setEndTime('');
+      setPosition('');
+      setSelectedEmployeeId('');
+      loadShifts();
+    } catch (err) {
+      console.error('Create shift error:', err);
+      Alert.alert('Error', err.message || 'Something went wrong');
+    }
+  };
+
+  const getShiftsByRole = (role) => {
+    return shifts.filter((s) => {
+      const shiftDate = new Date(s.shift_date).toISOString().split('T')[0];
+      return shiftDate === selectedDate && s.position === role;
+    });
+  };
+
   if (user?.user?.role !== 'manager') {
     return (
       <View style={{ padding: 20 }}>
@@ -33,169 +149,129 @@ export default function CreateShift() {
     );
   }
 
-  // Fetch employee list
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const res = await fetch('http://192.168.0.8:5000/api/employees', {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        });
-        const data = await res.json();
-        setEmployees(data); // data is already an array
-      } catch (err) {
-        console.error('Error fetching employees:', err);
-      }
-    };
-
-    fetchEmployees();
-  }, []);
-
-  const handleCreateShift = async () => {
-    if (!shiftDate || !startTime || !endTime || !position) {
-      Platform.OS === 'web'
-        ? alert('Please complete all required fields.')
-        : Alert.alert('Missing Fields', 'Please complete all required fields.');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://192.168.0.8:5000/api/shifts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({
-          shift_date: shiftDate,
-          start_time: startTime,
-          end_time: endTime,
-          position: position,
-          employee_id: selectedEmployeeId || null,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.log('❌ Server Error:', data);
-        Platform.OS === 'web'
-          ? alert(`❌ Failed: ${data.message || 'Error'}`)
-          : Alert.alert('❌ Failed to create shift', data.message || '');
-        return;
-      }
-
-      console.log('✅ Response Data:', data);
-
-      Platform.OS === 'web'
-        ? alert('✅ Shift Created: The shift was created successfully.')
-        : Alert.alert('✅ Shift Created', 'The shift was created successfully.');
-
-      setShiftDate('');
-      setStartTime('');
-      setEndTime('');
-      setPosition('');
-      setSelectedEmployeeId('');
-    } catch (error) {
-      console.error('❌ Error:', error);
-      Platform.OS === 'web'
-        ? alert('❌ Network Error')
-        : Alert.alert('❌ Error', 'There was a problem creating the shift.');
-    }
-  };
-
   return (
-    <View style={{ padding: 20 }}>
-      <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>
-        Create New Shift
-      </Text>
+    <ScrollView style={{ padding: 16 }}>
+      <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 10 }}>Manager Shift Builder</Text>
 
-      <Text>Select Date:</Text>
-      <View style={{ borderWidth: 1, marginBottom: 10 }}>
-        <Picker
-          selectedValue={shiftDate}
-          onValueChange={(val) => setShiftDate(val)}
-        >
-          <Picker.Item label="-- Select a date --" value="" color="gray" />
-          {Array.from({ length: 7 }).map((_, index) => {
-            const date = new Date();
-            date.setDate(date.getDate() + index);
-            const formatted = date.toISOString().split('T')[0];
-            return (
-              <Picker.Item
-                key={formatted}
-                label={formatted}
-                value={formatted}
-                color="black"
-              />
-            );
-          })}
-        </Picker>
+      {/* Calendar Grid */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 20 }}>
+        {calendarDates.map((date, index) => {
+          const formatted = formatDate(date);
+          const isSelected = selectedDate === formatted;
+          const showMonth =
+            index === 0 || date.getMonth() !== calendarDates[index - 1].getMonth();
+
+          return (
+            <View
+              key={formatted}
+              style={{ width: '14.28%', alignItems: 'center', marginBottom: 6, padding: 2 }}>
+              {showMonth && (
+                <Text style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>
+                  {getMonthName(date)}
+                </Text>
+              )}
+              <TouchableOpacity
+                onPress={() => setSelectedDate(formatted)}
+                style={{
+                  padding: 6,
+                  backgroundColor: isSelected ? '#4CAF50' : '#f0f0f0',
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: isSelected ? '#388E3C' : '#ccc',
+                }}>
+                <Text style={{ fontSize: 12, color: isSelected ? 'white' : 'black' }}>
+                  {date.getDate()}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </View>
 
-      <Text>Start Time:</Text>
-      <View style={{ borderWidth: 1, marginBottom: 10 }}>
-        <Picker
-          selectedValue={startTime}
-          onValueChange={(val) => setStartTime(val)}
-        >
-          <Picker.Item label="-- Select start time --" value="" color="gray" />
-          {timeOptions.map((time) => (
-            <Picker.Item key={time} label={time} value={time} color="black" />
+      {selectedDate !== '' && (
+        <View style={{ marginBottom: 20 }}>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>
+            Create Shift for {selectedDate}
+          </Text>
+
+          <Text>Start Time:</Text>
+          <View style={{ borderWidth: 1, marginBottom: 10 }}>
+            <Picker selectedValue={startTime} onValueChange={setStartTime}>
+              <Picker.Item label="-- Select --" value="" />
+              {timeOptions.map((opt) => (
+                <Picker.Item key={opt} label={opt} value={opt} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text>End Time:</Text>
+          <View style={{ borderWidth: 1, marginBottom: 10 }}>
+            <Picker selectedValue={endTime} onValueChange={setEndTime}>
+              <Picker.Item label="-- Select --" value="" />
+              {timeOptions.map((opt) => (
+                <Picker.Item key={opt} label={opt} value={opt} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text>Position:</Text>
+          <View style={{ borderWidth: 1, marginBottom: 10 }}>
+            <Picker selectedValue={position} onValueChange={setPosition}>
+              <Picker.Item label="-- Select --" value="" />
+              {positionOptions.map((opt) => (
+                <Picker.Item key={opt} label={opt} value={opt} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text>Assign to Employee:</Text>
+          <View style={{ borderWidth: 1, marginBottom: 10 }}>
+            <Picker selectedValue={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+              <Picker.Item label="-- Optional --" value="" />
+              {employees.map((emp) => (
+                <Picker.Item key={emp.id} label={emp.name || emp.email} value={emp.id} />
+              ))}
+            </Picker>
+          </View>
+
+          <Button title="Create Shift" onPress={handleCreateShift} />
+        </View>
+      )}
+
+      {/* Schedule Grid */}
+      {selectedDate !== '' && (
+        <View style={{ marginBottom: 40 }}>
+          <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>
+            Schedule for {selectedDate}
+          </Text>
+
+          <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Lunch</Text>
+          {lunchRoles.map((role) => (
+            <Text key={role} style={{ marginBottom: 5 }}>
+              {role}:{' '}
+              {getShiftsByRole(role)
+                .map((s) => {
+                  const emp = employees.find((e) => e.id === s.employee_id);
+                  return `${emp?.email || 'Unassigned'} (${s.start_time})`;
+                })
+                .join(', ') || '—'}
+            </Text>
           ))}
-        </Picker>
-      </View>
 
-      <Text>End Time:</Text>
-      <View style={{ borderWidth: 1, marginBottom: 10 }}>
-        <Picker
-          selectedValue={endTime}
-          onValueChange={(val) => setEndTime(val)}
-        >
-          <Picker.Item label="-- Select end time --" value="" color="gray" />
-          {timeOptions.map((time) => (
-            <Picker.Item key={time} label={time} value={time} color="black" />
+          <Text style={{ fontWeight: 'bold', marginTop: 10, marginBottom: 5 }}>Dinner</Text>
+          {dinnerRoles.map((role) => (
+            <Text key={role} style={{ marginBottom: 5 }}>
+              {role}:{' '}
+              {getShiftsByRole(role)
+                .map((s) => {
+                  const emp = employees.find((e) => e.id === s.employee_id);
+                  return `${emp?.email || 'Unassigned'} (${s.start_time})`;
+                })
+                .join(', ') || '—'}
+            </Text>
           ))}
-        </Picker>
-      </View>
-
-      <Text>Position:</Text>
-      <View style={{ borderWidth: 1, marginBottom: 10 }}>
-        <Picker
-          selectedValue={position}
-          onValueChange={(val) => setPosition(val)}
-        >
-          <Picker.Item label="-- Select a position --" value="" color="gray" />
-          {positionOptions.map((pos) => (
-            <Picker.Item key={pos} label={pos} value={pos} color="black" />
-          ))}
-        </Picker>
-      </View>
-
-      <Text>Assign to Employee (optional):</Text>
-      <View style={{ borderWidth: 1, marginBottom: 20 }}>
-        <Picker
-          selectedValue={selectedEmployeeId}
-          onValueChange={(val) => setSelectedEmployeeId(val)}
-        >
-          <Picker.Item
-            label="-- Select an employee --"
-            value=""
-            color="gray"
-          />
-          {employees.map((emp) => (
-            <Picker.Item
-              key={emp.id}
-              label={emp.name || emp.email}
-              value={emp.id}
-              color="black"
-            />
-          ))}
-        </Picker>
-      </View>
-
-      <Button title="Create Shift" onPress={handleCreateShift} />
-    </View>
+        </View>
+      )}
+    </ScrollView>
   );
 }
