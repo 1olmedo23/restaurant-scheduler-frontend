@@ -1,50 +1,23 @@
-# Welcome to your Expo app 👋
+#Restaurant Employee Scheduling App (Frontend)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
+This project is a responsive web application designed to help restaurant managers create and manage weekly employee schedules. Employees can log in to view their assigned shifts, improving visibility and reducing missed workdays due to schedule confusion.
+This tool modernizes the current paper-based system by providing real-time access to the schedule from any device. It was inspired by real operational challenges faced in a restaurant setting, including no-shows, employees arriving when not scheduled, and unclear shift communication. My goal is to eliminate schedule-related issues by improving access and accountability, reducing both missed shifts and unnecessary arrivals.
 
-## Get started
+## 🔧 Tech Stack
+- **Frontend:** React Native with Expo Router
+- **Styling:** Tailwind CSS (via NativeWind)
+- **Navigation:** Expo Router (file-based)
+- **State Management:** React Context API
+- **Backend API:** Node.js, Express, PostgreSQL (via REST API)
+- **Auth:** Token-based authentication with secure storage
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## ✨ Features
+- 🔒 Secure employee login with role-based access (manager vs employee)
+- 🗓️ Manager dashboard to create, assign, and view shifts by day
+- 📆 Visual calendar-style layout for shift creation
+- 👥 Assign roles (e.g., Server, Host, Busser) to shifts
+- 📲 Employees can view their full two-week schedule
+- 🔔 Notifications system for schedule updates
+- 🕐 Weekly availability management (employees + managers)
+- 🌐 Responsive and mobile-first design (for deployment to iOS/Android via Expo)
